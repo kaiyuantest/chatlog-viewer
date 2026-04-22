@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chatlog Viewer</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="panel panel-paths">
+        <div class="panel-head">
+          <h1>路径</h1>
+          <button id="refreshBtn" type="button">刷新</button>
+        </div>
+        <div class="config-box">
+          <div class="config-label">数据目录</div>
+          <div id="sessionsDirText" class="config-value"></div>
+          <div id="defaultDirHint" class="config-hint"></div>
+          <button id="chooseDirBtn" type="button">选择目录</button>
+        </div>
+        <input id="pathSearchInput" type="text" placeholder="搜索路径" />
+        <div id="pathsList" class="list"></div>
+      </aside>
+
+      <section class="panel panel-files">
+        <div class="panel-head">
+          <h2 id="pathTitle">时间点</h2>
+        </div>
+        <div id="filesList" class="list"></div>
+      </section>
+
+      <main class="panel panel-chat">
+        <div class="panel-head">
+          <h2 id="chatTitle">对话</h2>
+          <button id="copyChatBtn" type="button" disabled>复制当前对话</button>
+        </div>
+        <div id="chatView" class="chat-view empty">先选择路径，再选择时间点。</div>
+      </main>
+    </div>
+    <script src="./renderer.js"></script>
+  </body>
+  </html>

@@ -1,0 +1,38 @@
+{
+  "name": "chatlog-viewer",
+  "version": "0.1.0",
+  "private": true,
+  "productName": "Chatlog Viewer",
+  "description": "Local viewer for Codex jsonl chat logs.",
+  "author": "OpenAI Codex",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "local.chatlog.viewer",
+    "directories": {
+      "output": "dist"
+    },
+    "electronDist": "node_modules/electron/dist",
+    "icon": "assets/app-icon.png",
+    "files": [
+      "assets/**/*",
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ]
+    }
+  }
+}

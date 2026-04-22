@@ -1,0 +1,6 @@
+node_modules/
+dist/*
+!dist/Chatlog Viewer 0.1.0.exe
+*.log
+Thumbs.db
+.DS_Store
