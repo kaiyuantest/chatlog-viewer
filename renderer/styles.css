@@ -90,6 +90,16 @@ body {
   margin-top: 10px;
 }
 
+.config-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.config-actions button {
+  margin-top: 0;
+}
+
 .list,
 .chat-view {
   flex: 1;
@@ -99,8 +109,8 @@ body {
 
 .item {
   width: 100%;
-  margin-bottom: 10px;
-  padding: 12px;
+  margin-bottom: 8px;
+  padding: 9px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: #fff;
@@ -113,15 +123,94 @@ body {
   background: #eff6ff;
 }
 
+.path-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  cursor: default;
+}
+
+.path-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.path-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  flex: 0 0 18px;
+}
+
+.path-check input {
+  margin: 0;
+}
+
+.path-main {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+}
+
+.path-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.mini-btn {
+  min-width: 34px;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.open-btn {
+  min-width: 42px;
+}
+
+.pin-btn {
+  min-width: 42px;
+}
+
+.transfer-btn {
+  min-width: 42px;
+}
+
+.cmd-btn {
+  min-width: 42px;
+}
+
+.path-action-status {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: #f9fafb;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .item-title {
   font-weight: 700;
   word-break: break-all;
+  font-size: 13px;
+  line-height: 1.25;
 }
 
 .item-meta {
-  margin-top: 4px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 .chat-view.empty {

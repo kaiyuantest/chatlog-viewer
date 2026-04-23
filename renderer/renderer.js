@@ -3,12 +3,15 @@ const state = {
   selectedPath: "",
   selectedFile: "",
   currentConversation: null,
-  config: null
+  config: null,
+  pathActionMessage: "",
+  selectedPaths: []
 };
 
 const elements = {
   refreshBtn: document.getElementById("refreshBtn"),
   chooseDirBtn: document.getElementById("chooseDirBtn"),
+  openSelectedCmdBtn: document.getElementById("openSelectedCmdBtn"),
   pathSearchInput: document.getElementById("pathSearchInput"),
   sessionsDirText: document.getElementById("sessionsDirText"),
   defaultDirHint: document.getElementById("defaultDirHint"),
@@ -27,32 +30,168 @@ function escapeHtml(text) {
     .replaceAll(">", "&gt;");
 }
 
-function renderPaths() {
+function getFilteredPaths() {
   const keyword = elements.pathSearchInput.value.trim().toLowerCase();
-  const paths = (state.index ? state.index.paths : []).filter((item) =>
-    item.cwd.toLowerCase().includes(keyword)
+  return (state.index ? state.index.paths : []).filter((item) => item.cwd.toLowerCase().includes(keyword));
+}
+
+function setPathActionMessage(text) {
+  state.pathActionMessage = text || "";
+  renderPaths();
+}
+
+function isPathSelected(cwd) {
+  return state.selectedPaths.includes(cwd);
+}
+
+function togglePathSelection(cwd) {
+  if (isPathSelected(cwd)) {
+    state.selectedPaths = state.selectedPaths.filter((item) => item !== cwd);
+  } else {
+    state.selectedPaths = [...state.selectedPaths, cwd];
+  }
+
+  renderPaths();
+}
+
+function syncSelectedPaths() {
+  const availablePaths = new Set((state.index ? state.index.paths : []).map((item) => item.cwd));
+  state.selectedPaths = state.selectedPaths.filter((cwd) => availablePaths.has(cwd));
+}
+
+async function savePathOrder() {
+  if (!state.index) {
+    return;
+  }
+
+  const result = await window.chatlogApi.setPathOrder({
+    rootDir: state.index.rootDir,
+    pathOrder: state.index.paths.map((item) => item.cwd)
+  });
+
+  if (state.config) {
+    state.config.pathOrder = result.pathOrder;
+  }
+}
+
+async function pinPath(cwd) {
+  if (!state.index) {
+    return;
+  }
+
+  const currentIndex = state.index.paths.findIndex((item) => item.cwd === cwd);
+  if (currentIndex <= 0) {
+    return;
+  }
+
+  const nextPaths = state.index.paths.slice();
+  const [target] = nextPaths.splice(currentIndex, 1);
+  nextPaths.unshift(target);
+  state.index.paths = nextPaths;
+
+  await savePathOrder();
+  renderPaths();
+  renderFiles();
+  setPathActionMessage("路径已置顶并保存");
+}
+
+async function transferPathHistory(cwd) {
+  if (!state.index) {
+    return;
+  }
+
+  const pathItem = state.index.paths.find((item) => item.cwd === cwd);
+  if (!pathItem || !pathItem.items.length) {
+    setPathActionMessage("该路径下没有可转移的时间点");
+    return;
+  }
+
+  setPathActionMessage(`正在转移 ${pathItem.items.length} 个时间点...`);
+  const result = await window.chatlogApi.exportPathHistoryFiles({
+    cwd,
+    items: pathItem.items
+  });
+
+  setPathActionMessage(
+    result.ok ? `已转移 ${result.count} 个时间点到当前路径目录` : `转移失败: ${result.error || "未知错误"}`
   );
+}
+
+function renderPaths() {
+  const paths = getFilteredPaths();
 
   elements.pathsList.innerHTML = paths
     .map(
       (item) => `
-        <button class="item ${item.cwd === state.selectedPath ? "active" : ""}" data-cwd="${escapeHtml(item.cwd)}">
-          <div class="item-title">${escapeHtml(item.cwd)}</div>
-          <div class="item-meta">${item.fileCount} 个时间点</div>
-        </button>
+        <div class="item path-item ${item.cwd === state.selectedPath ? "active" : ""}" data-cwd="${escapeHtml(item.cwd)}">
+          <button class="path-main" type="button" data-cwd-select="${escapeHtml(item.cwd)}">
+            <div class="item-title">${escapeHtml(item.cwd)}</div>
+          </button>
+          <div class="path-row">
+            <label class="path-check">
+              <input type="checkbox" data-select-path="${escapeHtml(item.cwd)}" ${isPathSelected(item.cwd) ? "checked" : ""} />
+            </label>
+            <div class="item-meta">${item.fileCount} 个时间点</div>
+            <div class="path-actions">
+              <button class="mini-btn open-btn" type="button" data-open-path="${escapeHtml(item.cwd)}">打开</button>
+              <button class="mini-btn pin-btn" type="button" data-pin-path="${escapeHtml(item.cwd)}" title="置顶">置顶</button>
+              <button class="mini-btn transfer-btn" type="button" data-transfer-path="${escapeHtml(item.cwd)}">转移</button>
+              <button class="mini-btn cmd-btn" type="button" data-open-cmd="${escapeHtml(item.cwd)}">CMD</button>
+            </div>
+          </div>
+        </div>
       `
     )
     .join("");
 
-  elements.pathsList.querySelectorAll("[data-cwd]").forEach((button) => {
+  elements.pathsList.querySelectorAll("[data-cwd-select]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.selectedPath = button.dataset.cwd;
+      state.selectedPath = button.dataset.cwdSelect;
       state.selectedFile = "";
       renderPaths();
       renderFiles();
       renderEmptyChat("先选择这个路径下的时间点。");
     });
   });
+
+  elements.pathsList.querySelectorAll("[data-select-path]").forEach((input) => {
+    input.addEventListener("change", () => {
+      togglePathSelection(input.dataset.selectPath);
+    });
+  });
+
+  elements.pathsList.querySelectorAll("[data-pin-path]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      await pinPath(button.dataset.pinPath);
+    });
+  });
+
+  elements.pathsList.querySelectorAll("[data-open-path]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const result = await window.chatlogApi.openPathInExplorer({ cwd: button.dataset.openPath });
+      setPathActionMessage(result.ok ? "已打开对应路径" : `打开路径失败: ${result.error || "未知错误"}`);
+    });
+  });
+
+  elements.pathsList.querySelectorAll("[data-transfer-path]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      await transferPathHistory(button.dataset.transferPath);
+    });
+  });
+
+  elements.pathsList.querySelectorAll("[data-open-cmd]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const result = await window.chatlogApi.openCmd({ cwd: button.dataset.openCmd });
+      setPathActionMessage(result.ok ? "已打开 CMD" : `打开 CMD 失败: ${result.error || "未知错误"}`);
+    });
+  });
+
+  if (state.pathActionMessage) {
+    elements.pathsList.insertAdjacentHTML(
+      "afterbegin",
+      `<div class="path-action-status">${escapeHtml(state.pathActionMessage)}</div>`
+    );
+  }
 }
 
 function renderConfig() {
@@ -157,6 +296,7 @@ async function loadIndex() {
   state.config = await window.chatlogApi.getConfig();
   renderConfig();
   state.index = await window.chatlogApi.loadIndex();
+  syncSelectedPaths();
   state.selectedPath = "";
   state.selectedFile = "";
   renderPaths();
@@ -206,12 +346,29 @@ elements.chooseDirBtn.addEventListener("click", async () => {
   const result = await window.chatlogApi.chooseSessionsDir();
   state.config = {
     sessionsDir: result.sessionsDir,
-    defaultSessionsDir: result.defaultSessionsDir
+    defaultSessionsDir: result.defaultSessionsDir,
+    pathOrder: result.pathOrder || []
   };
   renderConfig();
   await loadIndex();
 });
 elements.pathSearchInput.addEventListener("input", renderPaths);
+elements.openSelectedCmdBtn.addEventListener("click", async () => {
+  if (!state.selectedPaths.length) {
+    setPathActionMessage("请先勾选至少一个路径");
+    return;
+  }
+
+  setPathActionMessage("正在打开单标签多窗格...");
+  const result = await window.chatlogApi.openCmdTabs({ paths: state.selectedPaths });
+  setPathActionMessage(
+    result.ok
+      ? `已在单标签中慢速打开 ${result.openedCount || state.selectedPaths.length} 个窗格${
+          result.ignoredCount ? `，忽略 ${result.ignoredCount} 个超出上限的路径` : ""
+        }`
+      : `打开标签页失败: ${result.error || "未知错误"}`
+  );
+});
 elements.copyChatBtn.addEventListener("click", async () => {
   if (!state.currentConversation) {
     return;
